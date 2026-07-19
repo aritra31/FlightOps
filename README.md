@@ -1,15 +1,10 @@
-# FlightOps — AI Flight Search Agent
+# FlightOps: Flight Search Agent
 
-This is a conversational flight search agent powered by LLaMA 3.3, LangChain, and Google Flights data via SerpAPI. Ask in plain English - the agent picks the right tool, runs the search, and returns structured results. It's inspired to minimize effort in finding the most affordable flight tickets in today's era with a myriad of platforms available. While this is a prototype with free APIs used, it can be enhanced by replacing the models with higher versions of LLM models. 
+A chat agent that finds cheap flights. You ask in plain English, it decides which searches to run, calls Google Flights through SerpAPI, and comes back with ranked options. Built with LangChain tool calling on Groq's LLaMA 3.3 70B, wrapped in a Streamlit chat UI.
 
----
+## Why an agent instead of a search form
 
-## Demo
-
-![App Screenshot](assets/img1.png)
-![App Screenshot](assets/img2.png)
-![App Screenshot](assets/img3.png)
----
+A search form handles one question: this route, this date. But the questions people actually ask are messier. "What's the cheapest way to get to Miami in June" is really a scan across a whole month. "Should I fly out of Boston or New York" is a comparison across route combinations. An agent picks the right tool for the question, chains calls when it needs to, and handles follow ups in the same conversation.
 
 ## Project Structure
 
@@ -22,6 +17,37 @@ flightOps/
 └── .env              
 ```
 
+## The three tools
+
+**search_flights** is a straight route search. Origin, destination, date, one way or round trip. Returns the top 5 cheapest with airline, times, duration, and stops.
+
+**find_cheapest_dates** scans a month for a route, checking every third day, and returns the 3 cheapest dates. This is the "I'm flexible, when should I fly" tool.
+
+**compare_routes** takes multiple origins and destinations, prices every combination, and ranks them. "BOS,JFK" to "MIA,LAX" prices all four pairs in one go.
+
+The LLM reads the docstrings and decides which tool fits the question. No routing logic written by hand.
+
+## Decisions worth explaining
+
+**Caching.** Every SerpAPI call costs money and takes seconds. Identical queries within a session hit an in memory cache instead of the API. The month scanner benefits most since it fires ten plus searches per question.
+
+**Trimmed context.** Only the last 3 turns go to the model. Flight chat doesn't need memory of what you asked twenty minutes ago, and shorter context means faster, cheaper responses.
+
+**Temperature 0.** A flight agent inventing an airline or a price is worse than useless. Zero temperature keeps the model boring, which is what you want when the output is prices.
+
+**Groq over OpenAI.** Groq's inference is fast and the free tier is generous. A tool calling loop can make several LLM calls per user question, so latency adds up quickly.
+
+## Running it
+
+You need two free API keys: one from Groq (console.groq.com) and one from SerpAPI (serpapi.com).
+
+Create a `.env` file:
+
+## Demo
+
+![App Screenshot](assets/img1.png)
+![App Screenshot](assets/img2.png)
+![App Screenshot](assets/img3.png)
 ---
 
 ## Tools
